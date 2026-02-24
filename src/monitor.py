@@ -5,19 +5,22 @@ Checks analyze_lowliq signals on a loop and alerts when LONG/SHORT appears.
 Uses macOS system notifications + terminal bell.
 
 Usage:
-    python monitor.py                              # SUI/USDT, every 30s
-    python monitor.py --symbols SUI/USDT ETH/USDT # multiple pairs
-    python monitor.py --interval 60               # check every 60s
-    python monitor.py --min-confidence MEDIUM     # only MEDIUM/HIGH alerts
+    python monitor.py                               # SUI/USDT, every 30s
+    python monitor.py --symbols BTC/USDT --highliq # BTC with high-liq config
+    python monitor.py --symbols SUI/USDT ETH/USDT  # multiple pairs
+    python monitor.py --interval 60                # check every 60s
+    python monitor.py --min-confidence MEDIUM      # only MEDIUM/HIGH alerts
 """
 
 import argparse
+import importlib
 import subprocess
 import sys
 import time
 from datetime import datetime, timezone
 
-# Import logic directly from analyze_lowliq (no subprocess overhead)
+# Import logic directly from analyze (no subprocess overhead)
+# analyze.py checks sys.argv for --highliq at import time — must be present before import
 from analyze import (
     analyze,
     apply_btc_filter,
@@ -27,7 +30,10 @@ from analyze import (
     load_cache,
     recalculate_lowliq_indicators,
 )
-from config.lowliq import MTF_FILTER, VOLUME_WAIT_RATIO
+_cfg_name = 'config.highliq' if '--highliq' in sys.argv else 'config.lowliq'
+_cfg = importlib.import_module(_cfg_name)
+MTF_FILTER = _cfg.MTF_FILTER
+VOLUME_WAIT_RATIO = _cfg.VOLUME_WAIT_RATIO
 from core.render import render
 
 CONF_RANK = {'LOW': 0, 'MEDIUM': 1, 'HIGH': 2}
@@ -79,6 +85,8 @@ def main() -> None:
                         help='Symbols to watch (default: SUI/USDT)')
     parser.add_argument('--timeframe', default='1m', choices=['1m', '5m'],
                         help='Timeframe to analyze (default: 1m)')
+    parser.add_argument('--highliq', action='store_true',
+                        help='Use high-liquidity config (BTC/ETH)')
     parser.add_argument('--interval', type=int, default=30,
                         help='Check interval in seconds (default: 30)')
     parser.add_argument('--min-confidence', default='LOW', choices=['LOW', 'MEDIUM', 'HIGH'],
@@ -89,7 +97,8 @@ def main() -> None:
     # symbol -> last alerted direction ('LONG' | 'SHORT' | None)
     last_direction: dict[str, str | None] = {s: None for s in args.symbols}
 
-    print(f"[monitor] Watching: {', '.join(args.symbols)}  [{args.timeframe}]")
+    cfg_label = 'highliq' if args.highliq else 'lowliq'
+    print(f"[monitor] Watching: {', '.join(args.symbols)}  [{args.timeframe}]  cfg={cfg_label}")
     print(f"[monitor] Interval: {args.interval}s  |  Min confidence: {args.min_confidence}")
     print("[monitor] Press Ctrl+C to stop\n")
 
