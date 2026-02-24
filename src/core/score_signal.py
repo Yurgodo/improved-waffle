@@ -74,6 +74,7 @@ def score_direction(df: pd.DataFrame, cfg) -> dict:
     vwap = last['vwap']
     atr = last['atr']
     volume_spike = bool(last['volume_spike'])
+    bb_squeeze = bool(last['bb_squeeze'])
     bb_upper = last['bb_upper']
     bb_lower = last['bb_lower']
 
@@ -197,6 +198,10 @@ def score_direction(df: pd.DataFrame, cfg) -> dict:
         signal_reasons.append(f'⚠ верхний wick {upper_wick_ratio:.0%} — rejection от хаёв')
     elif direction == 'SHORT' and lower_wick_ratio > cfg.WICK_REJECTION_RATIO:
         signal_reasons.append(f'⚠ нижний wick {lower_wick_ratio:.0%} — rejection от лоёв')
+
+    # ── BB squeeze: signal allowed but flag it as breakout setup ─────────────
+    if bb_squeeze:
+        signal_reasons.append('⚠ BB squeeze — торгуем пробой, стоп плотнее')
 
     return {
         'direction': direction,

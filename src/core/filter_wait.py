@@ -36,7 +36,6 @@ def check_wait_conditions(df: pd.DataFrame, cfg) -> list[str]:
     rsi = last['rsi']
     volume = last['volume']
     volume_ma20 = last['volume_ma20']
-    bb_squeeze = bool(last['bb_squeeze'])
 
     reasons: list[str] = []
 
@@ -47,8 +46,5 @@ def check_wait_conditions(df: pd.DataFrame, cfg) -> list[str]:
         reasons.append(
             f'объём {volume:.1f} < {cfg.VOLUME_WAIT_RATIO}x avg ({volume_ma20 * cfg.VOLUME_WAIT_RATIO:.1f})'
         )
-
-    if bb_squeeze:
-        reasons.append('BB squeeze — ждём пробоя')
 
     return reasons
