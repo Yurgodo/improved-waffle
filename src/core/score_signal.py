@@ -101,16 +101,21 @@ def score_direction(df: pd.DataFrame, cfg) -> dict:
     else:
         short_score += 1
 
-    if pd.notna(rsi):
-        if rsi > 55:
-            long_score += 1
-        elif rsi < 45:
-            short_score += 1
+    # ── Momentum group: RSI + 3-candle body, capped at +1 total ─────────────
+    # Both agree on direction → +1 (avoids double-counting the same move)
+    # Contradiction (sticky RSI vs reversing candles) → 0 + conflict flag
+    rsi_long  = pd.notna(rsi) and rsi > 55
+    rsi_short = pd.notna(rsi) and rsi < 45
+    mom_long  = momentum == 'up'
+    mom_short = momentum == 'down'
+    momentum_conflict = False
 
-    if momentum == 'up':
+    if rsi_long and mom_long:
         long_score += 1
-    elif momentum == 'down':
+    elif rsi_short and mom_short:
         short_score += 1
+    elif (rsi_long and mom_short) or (rsi_short and mom_long):
+        momentum_conflict = True   # RSI залипает / ранний разворот → 0 + предупреждение
 
     if volume_spike:
         if last['close'] > last['open']:
@@ -192,12 +197,15 @@ def score_direction(df: pd.DataFrame, cfg) -> dict:
     if rr < cfg.RR_MIN:
         return _wait([f'R/R={rr:.1f} ниже минимального {cfg.RR_MIN}'])
 
-    # ── Opposing wick warning ─────────────────────────────────────────────────
+    # ── Warnings ──────────────────────────────────────────────────────────────
     signal_reasons: list[str] = []
     if direction == 'LONG' and upper_wick_ratio > cfg.WICK_REJECTION_RATIO:
         signal_reasons.append(f'⚠ верхний wick {upper_wick_ratio:.0%} — rejection от хаёв')
     elif direction == 'SHORT' and lower_wick_ratio > cfg.WICK_REJECTION_RATIO:
         signal_reasons.append(f'⚠ нижний wick {lower_wick_ratio:.0%} — rejection от лоёв')
+
+    if momentum_conflict:
+        signal_reasons.append('⚠ RSI и моментум противоречат — RSI залипает или ранний разворот')
 
     # ── BB squeeze: signal allowed but flag it as breakout setup ─────────────
     if bb_squeeze:
