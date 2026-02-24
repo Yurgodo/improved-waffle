@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 import ccxt
 import pandas as pd
 
-from get_data import calculate_indicators
+from data.get_data import calculate_indicators
 
 SYMBOLS = ['BTC/USDT', 'ETH/USDT', 'SUI/USDT']
 TIMEFRAMES = ['1m', '5m']

@@ -27,8 +27,8 @@ from analyze import (
     load_cache,
     recalculate_lowliq_indicators,
 )
-from config_lowliq import MTF_FILTER, VOLUME_WAIT_RATIO
-from render import render
+from config.lowliq import MTF_FILTER, VOLUME_WAIT_RATIO
+from core.render import render
 
 CONF_RANK = {'LOW': 0, 'MEDIUM': 1, 'HIGH': 2}
 

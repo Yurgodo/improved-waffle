@@ -3,9 +3,33 @@
 ## Role
 You are a crypto trading signal assistant. Your job is to analyze market data and provide clear trading signals for short-term scalping trades (5-15 minutes).
 
+## Project Structure
+
+```
+volume_farm/
+├── src/
+│   ├── analyze.py          # CLI entry point — runs full signal pipeline
+│   ├── monitor.py          # continuous signal watcher with macOS alerts
+│   ├── cache_daemon.py     # background process that refreshes market data
+│   ├── core/
+│   │   ├── filter_wait.py  # Step 1: WAIT condition checks
+│   │   ├── score_signal.py # Step 2: directional scoring + level computation
+│   │   └── render.py       # terminal output formatter
+│   ├── data/
+│   │   └── get_data.py     # CCXT data fetcher + indicator calculation
+│   └── config/
+│       ├── highliq.py      # tuning for BTC/USDT, ETH/USDT
+│       └── lowliq.py       # tuning for SUI/USDT and other mid-cap pairs
+├── .cache/                 # auto-generated market data cache (gitignored)
+├── CLAUDE.md
+└── .gitignore
+```
+
+All scripts are run from the project root: `python src/analyze.py ...`
+
 ## Workflow
 When the user asks for analysis (e.g. "analyze ETH", "BTC signal", "что по ETH"), you must:
-1. Run the signal script: `python analyze.py --symbol ETH/USDT --highliq` (BTC/ETH) or `python analyze.py --symbol SUI/USDT` (lowliq)
+1. Run the signal script: `python src/analyze.py --symbol ETH/USDT --highliq` (BTC/ETH) or `python src/analyze.py --symbol SUI/USDT` (lowliq)
 2. Read the output — signal, levels and reasoning are already computed
 3. Relay the result to the user, adding context if needed
 
@@ -71,24 +95,24 @@ Tie (equal scores) → WAIT "mixed signals". Volume spike on doji = 0 (no direct
 - R/R is computed from actual execution prices, not order levels — displayed R/R reflects real P&L
 
 ## Available Scripts
-- `analyze.py --symbol BTC/USDT --highliq` — signal for BTC
-- `analyze.py --symbol ETH/USDT --highliq` — signal for ETH
-- `analyze.py --symbol SUI/USDT` — signal for SUI
+- `python src/analyze.py --symbol BTC/USDT --highliq` — signal for BTC
+- `python src/analyze.py --symbol ETH/USDT --highliq` — signal for ETH
+- `python src/analyze.py --symbol SUI/USDT` — signal for SUI
 - Add `--timeframe 1m` or `--timeframe 5m` (default: 1m)
 - Add `--no-cache` to force live fetch (default: reads from cache if fresh)
 - Add `--no-mtf` to skip 5m MTF trend filter
-- Add `--highliq` to use high-liquidity config (`config_highliq.py`) for BTC/ETH
+- Add `--highliq` to use high-liquidity config (`src/config/highliq.py`) for BTC/ETH
 - Add `--json` to get raw JSON output
 - Default exchange: binance
 
 ## Cache Daemon
-A background process `cache_daemon.py` updates market data every 30 seconds.
+A background process `src/cache_daemon.py` updates market data every 30 seconds.
 - Symbols: BTC/USDT, ETH/USDT, SUI/USDT
 - Timeframes: 1m, 5m
 - Cache stored in `.cache/` directory
-- Start with: `python cache_daemon.py`
-- `analyze.py` reads from cache automatically (< 2 min age for 1m)
-- Stale or missing cache falls back to live fetch via `get_data.py`
+- Start with: `python src/cache_daemon.py`
+- `src/analyze.py` reads from cache automatically (< 2 min age for 1m)
+- Stale or missing cache falls back to live fetch via `src/data/get_data.py`
 - Cache stores **150 candles** (updated from 50) for better indicator warmup
 
 ## Signal Monitor (monitor.py)
@@ -100,26 +124,26 @@ A background process `cache_daemon.py` updates market data every 30 seconds.
 - When signal returns to WAIT → resets state, so next signal will alert again
 
 ```bash
-python monitor.py                               # SUI/USDT, every 30s
-python monitor.py --symbols SUI/USDT ETH/USDT  # multiple pairs
-python monitor.py --interval 60                 # check every 60s
-python monitor.py --min-confidence MEDIUM       # only MEDIUM/HIGH alerts
+python src/monitor.py                               # SUI/USDT, every 30s
+python src/monitor.py --symbols SUI/USDT ETH/USDT  # multiple pairs
+python src/monitor.py --interval 60                 # check every 60s
+python src/monitor.py --min-confidence MEDIUM       # only MEDIUM/HIGH alerts
 ```
 
 Typical setup (two terminals):
 ```bash
-python cache_daemon.py   # terminal 1
-python monitor.py        # terminal 2
+python src/cache_daemon.py   # terminal 1
+python src/monitor.py        # terminal 2
 ```
 
 ## Configs
-`analyze.py` supports two configs via `--highliq` flag:
-- **`config_highliq.py`** — BTC/USDT, ETH/USDT (tight stops, lower slippage)
-- **`config_lowliq.py`** — SUI/USDT и другие пары ниже топ-10 по OI на Binance
+`src/analyze.py` supports two configs via `--highliq` flag:
+- **`src/config/highliq.py`** — BTC/USDT, ETH/USDT (tight stops, lower slippage)
+- **`src/config/lowliq.py`** — SUI/USDT и другие пары ниже топ-10 по OI на Binance
 
 Все константы — в конфиг-файлах, не в скрипте.
 
-### Tunable constants in config_lowliq.py
+### Tunable constants in src/config/lowliq.py
 | Constant              | Default | Description                                        |
 |-----------------------|---------|----------------------------------------------------|
 | `ATR_STOP_MULT`       | 0.5     | ATR multiplier for stop beyond swing               |

@@ -16,11 +16,11 @@ import importlib
 
 import pandas as pd
 
-from filter_wait import check_wait_conditions
-from score_signal import score_direction, momentum_direction
-from render import render
+from core.filter_wait import check_wait_conditions
+from core.score_signal import score_direction, momentum_direction
+from core.render import render
 
-_cfg_name = 'config_highliq' if '--highliq' in sys.argv else 'config_lowliq'
+_cfg_name = 'config.highliq' if '--highliq' in sys.argv else 'config.lowliq'
 _cfg = importlib.import_module(_cfg_name)
 ATR_STOP_MULT = _cfg.ATR_STOP_MULT
 VOLUME_WAIT_RATIO = _cfg.VOLUME_WAIT_RATIO
@@ -59,7 +59,7 @@ def load_cache(symbol: str, timeframe: str) -> pd.DataFrame | None:
 
 
 def fetch_live(symbol: str, timeframe: str) -> pd.DataFrame:
-    from get_data import get_data
+    from data.get_data import get_data
     return get_data(symbol=symbol, timeframe=timeframe, use_cache=False)
 
 
