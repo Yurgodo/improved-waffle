@@ -39,17 +39,18 @@ def notify_macos(title: str, message: str) -> None:
     subprocess.run(['osascript', '-e', script], capture_output=True)
 
 
-def check_signal(symbol: str) -> dict | None:
-    df = load_cache(symbol, '1m')
+def check_signal(symbol: str, timeframe: str = '1m') -> dict | None:
+    df = load_cache(symbol, timeframe)
     if df is None:
-        df = fetch_live(symbol, '1m')
+        df = fetch_live(symbol, timeframe)
     if df is None or df.empty:
         return None
 
     df = recalculate_lowliq_indicators(df)
     result = analyze(df)
 
-    if MTF_FILTER and result['signal'] in ('LONG', 'SHORT'):
+    # MTF filter only applies to 1m signals (checks against 5m trend)
+    if timeframe == '1m' and MTF_FILTER and result['signal'] in ('LONG', 'SHORT'):
         trend_5m = get_5m_trend(symbol)
         if trend_5m is not None:
             result = apply_mtf_filter(result, trend_5m)
@@ -76,6 +77,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description='Continuous signal monitor using analyze_lowliq')
     parser.add_argument('--symbols', nargs='+', default=['SUI/USDT'],
                         help='Symbols to watch (default: SUI/USDT)')
+    parser.add_argument('--timeframe', default='1m', choices=['1m', '5m'],
+                        help='Timeframe to analyze (default: 1m)')
     parser.add_argument('--interval', type=int, default=30,
                         help='Check interval in seconds (default: 30)')
     parser.add_argument('--min-confidence', default='LOW', choices=['LOW', 'MEDIUM', 'HIGH'],
@@ -86,7 +89,7 @@ def main() -> None:
     # symbol -> last alerted direction ('LONG' | 'SHORT' | None)
     last_direction: dict[str, str | None] = {s: None for s in args.symbols}
 
-    print(f"[monitor] Watching: {', '.join(args.symbols)}")
+    print(f"[monitor] Watching: {', '.join(args.symbols)}  [{args.timeframe}]")
     print(f"[monitor] Interval: {args.interval}s  |  Min confidence: {args.min_confidence}")
     print("[monitor] Press Ctrl+C to stop\n")
 
@@ -95,7 +98,7 @@ def main() -> None:
 
         for symbol in args.symbols:
             try:
-                result = check_signal(symbol)
+                result = check_signal(symbol, args.timeframe)
                 if result is None:
                     print(f"[{now}] {symbol}: нет данных")
                     continue
@@ -120,7 +123,7 @@ def main() -> None:
                         sys.stdout.flush()
 
                         # Full signal printout
-                        print(render(result, symbol, '1m', VOLUME_WAIT_RATIO))
+                        print(render(result, symbol, args.timeframe, VOLUME_WAIT_RATIO))
 
                         # macOS notification
                         icon = '🟢' if sig == 'LONG' else '🔴'
