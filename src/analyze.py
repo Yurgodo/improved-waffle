@@ -27,7 +27,9 @@ VOLUME_WAIT_RATIO = _cfg.VOLUME_WAIT_RATIO
 EMA_FLAT_PCT = _cfg.EMA_FLAT_PCT
 SWING_LOOKBACK = _cfg.SWING_LOOKBACK
 RR_MIN = _cfg.RR_MIN
-VOLUME_SPIKE_MULT = _cfg.VOLUME_SPIKE_MULT
+VOLUME_SPIKE_PERCENTILE = _cfg.VOLUME_SPIKE_PERCENTILE
+VOLUME_SPIKE_WINDOW     = _cfg.VOLUME_SPIKE_WINDOW
+VOLUME_SPIKE_FOLLOW_PCT = _cfg.VOLUME_SPIKE_FOLLOW_PCT
 BB_SQUEEZE_WINDOW = _cfg.BB_SQUEEZE_WINDOW
 SLIPPAGE_PCT = _cfg.SLIPPAGE_PCT
 SPREAD_PCT = _cfg.SPREAD_PCT
@@ -67,9 +69,14 @@ def recalculate_lowliq_indicators(df: pd.DataFrame) -> pd.DataFrame:
     """Recalculate volume_spike, bb_squeeze, and vwap with lowliq-tuned parameters.
     Called after loading data to override get_data.py defaults.
     """
-    # Volume spike: 2.0x rolling median (robust to outliers vs 1.5x mean in get_data.py)
-    vol_median = df['volume'].rolling(20).median()
-    df['volume_spike'] = df['volume'] > vol_median * VOLUME_SPIKE_MULT
+    # Volume spike: percentile-based + 3-bar follow-through
+    # Prevents single fat-finger / arb candles from triggering (common on 1m perps)
+    vol_p_spike  = df['volume'].rolling(VOLUME_SPIKE_WINDOW).quantile(VOLUME_SPIKE_PERCENTILE)
+    vol_p_follow = df['volume'].rolling(VOLUME_SPIKE_WINDOW).quantile(VOLUME_SPIKE_FOLLOW_PCT)
+    df['volume_spike'] = (
+        (df['volume'] > vol_p_spike) &
+        (df['volume'].rolling(3).mean() > vol_p_follow)
+    )
 
     # BB squeeze: wider window = less false squeezes on noisy pairs
     df['bb_width'] = df['bb_upper'] - df['bb_lower']

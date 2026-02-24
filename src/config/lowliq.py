@@ -17,9 +17,12 @@ SWING_LOOKBACK = 12        # BTC/ETH equivalent: 10; was 25 (too wide for 1m sca
 # Minimum R/R ratio to emit a signal (otherwise WAIT)
 RR_MIN = 1.5
 
-# Volume spike: multiplier above rolling median to flag as spike
-# Median is more robust to outliers than mean (used in get_data.py)
-VOLUME_SPIKE_MULT = 2.0    # get_data.py default: 1.5x mean
+# Volume spike: percentile + follow-through (more robust than single-bar median mult)
+# Spike = current bar above p90 AND 3-bar rolling mean above p70
+# Prevents single fat-finger / arb candles from triggering
+VOLUME_SPIKE_PERCENTILE = 0.90   # top-10% of VOLUME_SPIKE_WINDOW bars = spike bar
+VOLUME_SPIKE_WINDOW     = 30     # rolling window for percentile calculation
+VOLUME_SPIKE_FOLLOW_PCT = 0.70   # 3-bar mean must exceed this percentile (follow-through)
 
 # BB squeeze: rolling window for detecting band narrowing
 BB_SQUEEZE_WINDOW = 20     # get_data.py default: 5

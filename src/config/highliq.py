@@ -18,9 +18,11 @@ SWING_LOOKBACK = 10        # lowliq: 12
 # Minimum R/R ratio to emit a signal (otherwise WAIT)
 RR_MIN = 1.5
 
-# Volume spike: multiplier above rolling mean to flag as spike
-# Mean works well for BTC/ETH — volume is more normally distributed
-VOLUME_SPIKE_MULT = 1.5    # lowliq: 2.0x median
+# Volume spike: percentile + follow-through (more robust than single-bar mean mult)
+# Slightly lower percentile than lowliq — BTC/ETH volume is more normally distributed
+VOLUME_SPIKE_PERCENTILE = 0.85   # top-15% threshold; lowliq: 0.90
+VOLUME_SPIKE_WINDOW     = 30     # rolling window for percentile calculation
+VOLUME_SPIKE_FOLLOW_PCT = 0.70   # 3-bar mean must exceed this percentile (follow-through)
 
 # BB squeeze: rolling window for detecting band narrowing
 BB_SQUEEZE_WINDOW = 10     # lowliq: 20
