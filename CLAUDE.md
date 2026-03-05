@@ -109,6 +109,7 @@ Tie (equal scores) → WAIT "mixed signals". Volume spike on doji = 0 (no direct
 A background process `src/cache_daemon.py` maintains live market data via **WebSocket** connections.
 - Uses `ccxt.pro` (Binance WebSocket) — persistent connections, updates on every tick
 - All symbol/timeframe pairs run concurrently via `asyncio.gather`
+- On startup: pre-fetches 150 historical candles via REST (`fetch_ohlcv`) before entering WebSocket loop — `watch_ohlcv` returns only the current live candle, so without this prefetch the cache would not be populated for ~50 minutes
 - Rolling buffer of 150 candles per stream; cache written on every candle update
 - Symbols: BTC/USDT, ETH/USDT, SUI/USDT, UNI/USDT
 - Timeframes: 1m, 5m

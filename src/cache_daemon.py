@@ -53,6 +53,19 @@ def now():
 async def watch_symbol_timeframe(exchange, symbol, timeframe):
     buf = _buffers.setdefault((symbol, timeframe), deque(maxlen=LIMIT))
 
+    # Pre-populate buffer with historical candles via REST before WebSocket loop.
+    # watch_ohlcv returns only the current live candle (no history), so without
+    # this prefetch the 50-candle threshold would not be reached for ~50 minutes.
+    try:
+        history = await exchange.fetch_ohlcv(symbol, timeframe, limit=LIMIT)
+        for candle in history:
+            buf.append(candle)
+        print(f'[{now()}] {symbol} {timeframe}  prefetched {len(history)} candles')
+        if len(buf) >= 50:
+            write_cache(symbol, timeframe, list(buf))
+    except Exception as e:
+        print(f'[{now()}] WARN {symbol} {timeframe} prefetch failed: {e}', file=sys.stderr)
+
     while True:
         try:
             candles = await exchange.watch_ohlcv(symbol, timeframe, limit=LIMIT)
