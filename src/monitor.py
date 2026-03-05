@@ -144,9 +144,9 @@ def main() -> None:
                         )
                         notify_macos(title, body)
 
-                    elif direction_changed and rank < min_rank:
-                        # Signal appeared but below confidence threshold
-                        last_direction[symbol] = sig
+                    elif rank < min_rank:
+                        # Signal appeared but below confidence threshold — do NOT update
+                        # last_direction so that if confidence improves, the alert will fire
                         print(f"  ↳ сигнал {sig} (conf={conf_str}) — ниже порога {args.min_confidence}, пропускаем")
 
                 else:
