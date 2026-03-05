@@ -106,14 +106,17 @@ Tie (equal scores) → WAIT "mixed signals". Volume spike on doji = 0 (no direct
 - Default exchange: binance
 
 ## Cache Daemon
-A background process `src/cache_daemon.py` updates market data every 30 seconds.
-- Symbols: BTC/USDT, ETH/USDT, SUI/USDT
+A background process `src/cache_daemon.py` maintains live market data via **WebSocket** connections.
+- Uses `ccxt.pro` (Binance WebSocket) — persistent connections, updates on every tick
+- All symbol/timeframe pairs run concurrently via `asyncio.gather`
+- Rolling buffer of 150 candles per stream; cache written on every candle update
+- Symbols: BTC/USDT, ETH/USDT, SUI/USDT, UNI/USDT
 - Timeframes: 1m, 5m
 - Cache stored in `.cache/` directory
 - Start with: `python src/cache_daemon.py`
 - `src/analyze.py` reads from cache automatically (< 2 min age for 1m)
 - Stale or missing cache falls back to live fetch via `src/data/get_data.py`
-- Cache stores **150 candles** (updated from 50) for better indicator warmup
+- Cache stores **150 candles** for better indicator warmup
 
 ## Signal Monitor (monitor.py)
 `monitor.py` continuously checks signals and alerts when LONG/SHORT appears.
